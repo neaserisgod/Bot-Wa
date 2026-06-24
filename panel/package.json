@@ -1,0 +1,18 @@
+{
+  "name": "panel-nefertiti",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Panel de gestión y ventas (POS) para el almacén Nefertiti. Comparte la base SQLite del bot de WhatsApp.",
+  "scripts": {
+    "dev": "next dev -p 3000",
+    "build": "next build",
+    "start": "next start -p 3000",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "better-sqlite3": "^12.11.1",
+    "next": "14.2.15",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  }
+}

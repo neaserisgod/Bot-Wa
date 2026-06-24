@@ -1,0 +1,13 @@
+node_modules/
+.env
+.env.local
+data/
+logs/
+session/
+backups/
+.wwebjs_cache/
+.claude/
+bot.pid
+qr_output.log
+qr_output_err.log
+*.pid
