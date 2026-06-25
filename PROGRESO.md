@@ -790,6 +790,43 @@ bot sigue funcionando con normalidad en el mensaje siguiente (`ping` → `pong` 
 
 ---
 
+## 10-bis. Watchdog de salud de la sesión de WhatsApp
+
+Bug real en producción: el proceso quedó **9 horas sin recibir ni un solo mensaje**, sin ningún
+error en los logs — vivo pero "zombie". `whatsapp-web.js` no disparó `disconnected`; es un problema
+conocido de la librería (el WebSocket interno de WhatsApp Web puede morir en silencio en sesiones
+largas, sin que el wrapper se entere).
+
+**`src/bot/watchdog.js`** (nuevo) — `iniciarWatchdog(client)`: cada 5 minutos llama a
+`client.getState()` con un timeout de 30s (`Promise.race`). Si no contesta a tiempo, o devuelve un
+estado distinto de `WAState.CONNECTED`, cuenta como fallo. Al segundo fallo consecutivo (tolera uno
+transitorio), loguea y hace `process.exit(1)`.
+
+**Por qué `process.exit` y no reparar la conexión en caliente:** si Puppeteer está colgado,
+`client.destroy()`/`client.initialize()` también pueden quedarse esperando para siempre — es el
+mismo problema que se está tratando de resolver, no una solución. El patrón estándar de Node es
+"dejalo morir, que el supervisor lo reinicie" en vez de autocurarse en un estado posiblemente
+corrupto. En producción, **PM2** (`ecosystem.config.js`, ya configurado con `restart_delay`) lo
+reinicia solo y limpio.
+
+**Limitación conocida:** en esta PC de desarrollo el bot se lanza a mano con `Start-Process` de
+PowerShell, sin PM2 — así que acá el watchdog detecta el problema y loguea +sale del proceso, pero
+no se vuelve a levantar solo (hay que reiniciarlo a mano, igual que hoy). La parte de
+autoreinicio real depende de correr bajo PM2 (como va a estar en el VPS).
+
+**`src/handlers/messageHandler.js`** — `haceCuantoSinActividad()` (nueva, exportada): timestamp del
+último mensaje procesado, para que el log del watchdog diga "hace X min que no se procesa nada" en
+vez de solo "falló el chequeo" — da contexto real al diagnosticar.
+
+### Cómo probarlo en la PC de Bruno
+
+No hay forma de simular un "colgado" real sin esperar — para confirmar que dispara, lo más simple es
+mirar el log al arrancar (`Watchdog de salud de WhatsApp iniciado...`) y, si alguna vez vuelve a
+pasar el zombie, confirmar en los logs las líneas `Watchdog: chequeo de salud falló (1/2)...` /
+`(2/2)... Reiniciando el proceso` antes de que el proceso muera solo.
+
+---
+
 ## 11. Notas de entorno de esta PC de desarrollo (no aplican al VPS)
 
 - Node global: v24.17.0 (no hay Python/Build Tools, por eso se usa `better-sqlite3 ^12.11.1` con binario prebuilto en vez de `^11.x` que requería compilar).

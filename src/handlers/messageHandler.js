@@ -67,11 +67,21 @@ function encolarPorRemitente(clave, tarea) {
   return actual;
 }
 
+// Diagnóstico para el watchdog (src/bot/watchdog.js): cuándo se procesó el
+// último mensaje, para loguear contexto si el watchdog detecta la sesión
+// colgada ("hace cuánto que no entra nada").
+let ultimaActividad = Date.now();
+
+function haceCuantoSinActividad() {
+  return Date.now() - ultimaActividad;
+}
+
 async function manejarMensaje(client, msg) {
   return encolarPorRemitente(msg.from, () => procesarMensaje(client, msg));
 }
 
 async function procesarMensaje(client, msg) {
+  ultimaActividad = Date.now();
   logger.info(`Mensaje recibido de ${msg.from} (author: ${msg.author}): "${msg.body}"`);
 
   if (esMensajeDeGrupo(msg)) return;
@@ -142,4 +152,4 @@ async function procesarMensaje(client, msg) {
   }
 }
 
-module.exports = { manejarMensaje };
+module.exports = { manejarMensaje, haceCuantoSinActividad };

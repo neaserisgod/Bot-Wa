@@ -77,11 +77,15 @@ function main() {
   const { iniciarCronJobs } = require('../cron/tareas');
   const { iniciarBackupCron } = require('../cron/backup');
   const { iniciarServidorPanel } = require('../api/server');
+  const { iniciarWatchdog } = require('./watchdog');
   client.on('ready', () => {
     iniciarCronJobs(client);
     iniciarBackupCron();
     // Puente HTTP para que el panel de gestión pueda pedir avisos al cliente.
     iniciarServidorPanel(client);
+    // Detecta si la sesión queda "zombie" (sin recibir nada, sin avisar) y
+    // reinicia el proceso — ver src/bot/watchdog.js.
+    iniciarWatchdog(client);
   });
 
   client.initialize();
